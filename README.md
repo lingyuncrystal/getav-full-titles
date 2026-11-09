@@ -33,6 +33,43 @@
 
 当前版本：**1.7.0**，详见 [CHANGELOG](./CHANGELOG.md)。
 
+## 发布流程
+
+### 原理
+
+Sleazyfork 没有写入 API，官方支持的自动发布方式是「从 URL 同步 + GitHub Webhook」：
+
+```
+push 到 main → GitHub 触发 webhook → Sleazyfork 抓取 raw 文件 → @version 更新时才发布
+```
+
+### 一次性配置（只需做一次）
+
+1. 登录 Sleazyfork，打开本脚本的管理页 → **Syncing（同步）设置**：
+   - 同步方式选 **Webhook**；
+   - 同步地址填 raw 文件地址（注意是 `raw` 地址，不能是 `/blob/` 页面地址）：
+     ```
+     https://raw.githubusercontent.com/lingyuncrystal/getav-full-titles/main/getav-full-titles.user.js
+     ```
+2. 保存后页面会生成本脚本专属的 Webhook URL，复制它，二选一：
+   - 到 GitHub 仓库 **Settings → Webhooks → Add webhook**：Payload URL 填该地址，Content type 选 `application/json`，只勾 **push** 事件；
+   - 或者把 URL 交给维护者，运行 `SLEAZYFORK_WEBHOOK_URL=<url> ./scripts/publish.sh` 自动配置。
+3. 点一次「Sync now」验证 Sleazyfork 能抓到文件。
+
+### 日常发布（改完代码一键发布）
+
+1. 修改 `getav-full-titles.user.js`， bump 头部的 `@version`，并在 `CHANGELOG.md` 添加对应条目；
+2. 运行：
+
+   ```bash
+   ./scripts/publish.sh            # 可加提交说明：./scripts/publish.sh "fix: 修复xxx"
+   ```
+
+   脚本会自动完成：语法检查 → 校验版本号必须大于上一个 tag → 补全 CHANGELOG 日期 → 提交 → 打 tag → 推送 GitHub；
+3. push 后几秒内 GitHub 触发 webhook，Sleazyfork 完成同步（**仅当 `@version` 比线上新时才发布新版本**）。
+
+先用 `./scripts/publish.sh --dry-run` 可以只检查不发布。
+
 ## 许可证
 
 [MIT](./LICENSE)
