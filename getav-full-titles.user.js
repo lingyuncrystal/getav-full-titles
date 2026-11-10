@@ -2,8 +2,8 @@
 // @name         GetAV 视频标题完整显示 + 订阅页三列美化
 // @namespace    https://getav.net/
 // @license      MIT
-// @version      1.7.0
-// @description  完整显示视频标题不再省略；仅在“我的订阅”页把订阅列表改为网格卡片（宽屏3列/窄屏2列），名字两行居中显示
+// @version      1.7.1
+// @description  完整显示视频标题不再省略；列表页标题字号加大一号；仅在“我的订阅”页把订阅列表改为网格卡片（宽屏3列/窄屏2列），名字两行居中显示
 // @match        *://getav.net/*
 // @match        *://*.getav.net/*
 // @grant        none
@@ -294,13 +294,35 @@
         }
     }
 
-    /* ---------- 5. 监听动态加载 ---------- */
+    /* ---------- 5. 列表页：标题字号大一号 ---------- */
+    const enlargedTitles = new WeakSet();
+    function enlargeListTitles(root) {
+        // 订阅页有专门的名字样式，视频详情页不在此列，其余（首页/分类/搜索等）都算列表页
+        if (/\/profile\/subscriptions/.test(location.pathname)) return;
+        if (/\/(video|watch|play|v)\//i.test(location.pathname)) return;
+        const els = (root || document).querySelectorAll(
+            'a[title], h1, h2, h3, h4, .title, .video-title, [class*="title"], [class*="Title"]'
+        );
+        for (const el of els) {
+            if (enlargedTitles.has(el)) continue;
+            if (el.closest('#getav-sub-grid')) continue;
+            enlargedTitles.add(el);
+            const size = parseFloat(getComputedStyle(el).fontSize);
+            // 只对正文级别的标题放大（11–20px），跳过大标题和极小字
+            if (size >= 11 && size <= 20) {
+                el.style.setProperty('font-size', Math.round(size * 1.12) + 'px', 'important');
+            }
+        }
+    }
+
+    /* ---------- 6. 监听动态加载 ---------- */
     let timer = null;
     const schedule = () => {
         clearTimeout(timer);
         timer = setTimeout(() => {
             fillFromTitle();
             expandTruncated();
+            enlargeListTitles();
             makeThreeColumns();
         }, 300);
     };
@@ -311,6 +333,7 @@
     function boot() {
         fillFromTitle(document);
         expandTruncated(document);
+        enlargeListTitles(document);
         makeThreeColumns();
         mo.observe(document.body, { childList: true, subtree: true });
     }
