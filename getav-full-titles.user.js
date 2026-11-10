@@ -2,7 +2,7 @@
 // @name         GetAV 视频标题完整显示 + 订阅页三列美化
 // @namespace    https://getav.net/
 // @license      MIT
-// @version      1.7.1
+// @version      1.7.2
 // @description  完整显示视频标题不再省略；列表页标题字号加大一号；仅在“我的订阅”页把订阅列表改为网格卡片（宽屏3列/窄屏2列），名字两行居中显示
 // @match        *://getav.net/*
 // @match        *://*.getav.net/*
@@ -297,9 +297,9 @@
     /* ---------- 5. 列表页：标题字号大一号 ---------- */
     const enlargedTitles = new WeakSet();
     function enlargeListTitles(root) {
-        // 订阅页有专门的名字样式，视频详情页不在此列，其余（首页/分类/搜索等）都算列表页
+        // 订阅页有专门的名字样式，视频详情页（/videos/番号）不在此列，其余（首页/分类/搜索等）都算列表页
         if (/\/profile\/subscriptions/.test(location.pathname)) return;
-        if (/\/(video|watch|play|v)\//i.test(location.pathname)) return;
+        if (/\/videos\//i.test(location.pathname)) return;
         const els = (root || document).querySelectorAll(
             'a[title], h1, h2, h3, h4, .title, .video-title, [class*="title"], [class*="Title"]'
         );
