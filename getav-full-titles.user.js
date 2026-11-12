@@ -2,7 +2,8 @@
 // @name         GetAV 视频标题完整显示 + 订阅页三列美化
 // @namespace    https://getav.net/
 // @license      MIT
-// @version      1.7.2
+// @icon         https://getav.net/favicon.ico
+// @version      1.7.3
 // @description  完整显示视频标题不再省略；列表页标题字号加大一号；仅在“我的订阅”页把订阅列表改为网格卡片（宽屏3列/窄屏2列），名字两行居中显示
 // @match        *://getav.net/*
 // @match        *://*.getav.net/*
