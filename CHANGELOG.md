@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.7.5] - 2026-11-13
+
+- 脚本头补上 @author（修复脚本管理器显示 unknown author）；新增 @updateURL/@downloadURL 指向 GitHub raw——以后更新直接走 GitHub，不再依赖国内访问不稳定的 Sleazyfork 更新服务器
+
 ## [1.7.4] - 2026-11-13
 
 - 修复列表页标题放大偶发失效：脚本是 document-start 运行，首次检查时站点 CSS 可能未加载完，元素被提前标记进 WeakSet 后永久跳过；改为确认放大后才标记
