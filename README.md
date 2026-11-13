@@ -1,5 +1,12 @@
 # GetAV网站脚本（getav-full-titles）
 
+> ⚠️ **已停止维护（2026-11-13）**：本脚本的全部功能已并入 **「MissAV 综合增强」v4.0.0**（MissAV / Jable / GetAV 三站合一），并获得三站互通的标题缓存（缓存 → GetAV 精校中字 → 大模型）。
+>
+> **请改用新脚本**：<https://sleazyfork.org/zh-CN/scripts/605067>
+> 新脚本仓库： <https://github.com/lingyuncrystal/missav-pagination-dedup>
+>
+> 迁移步骤：① 安装新脚本；② 删除本脚本。本仓库已归档，仅保留历史代码供参考。
+
 适用于 [GetAV](https://getav.net/) 的油猴（Tampermonkey / Violentmonkey）用户脚本：
 
 - **视频标题完整显示**：解除全站标题的单行截断与省略号，长标题自动换行完整展示；对仍被截断的元素自动展开，并用 `title` 属性补全文字。
