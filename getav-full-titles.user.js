@@ -3,7 +3,7 @@
 // @namespace    https://getav.net/
 // @license      MIT
 // @icon         https://getav.net/favicon.ico
-// @version      1.7.3
+// @version      1.7.4
 // @description  完整显示视频标题不再省略；列表页标题字号加大一号；仅在“我的订阅”页把订阅列表改为网格卡片（宽屏3列/窄屏2列），名字两行居中显示
 // @match        *://getav.net/*
 // @match        *://*.getav.net/*
@@ -16,7 +16,25 @@
 
     const isSubscriptionsPage = /\/profile\/subscriptions/.test(location.pathname);
 
-    /* ---------- 1. 全局样式：解除单行截断（所有页面） ---------- */
+    /* ===== 共享常量 ===== */
+    const ENLARGE_FACTOR = 1.12; // 列表页标题放大倍率（实测约大一号，再大卡片会拥挤）
+    const MIN_FONT_SIZE = 11;    // 只放大正文级标题：跳过更小的辅助文字
+    const MAX_FONT_SIZE = 20;    // 跳过页面大标题
+    const DEBOUNCE_MS = 300;     // MutationObserver 高频回调的防抖间隔
+
+    /**
+     * querySelectorAll 的补充：动态加载时新增节点本身可能也匹配选择器，
+     * 而 querySelectorAll 只查后代，需要把 root 自身一并纳入。
+     */
+    function queryAllWithSelf(root, selector) {
+        const list = [...(root || document).querySelectorAll(selector)];
+        if (root && root.nodeType === 1 && typeof root.matches === 'function' && root.matches(selector)) {
+            list.unshift(root);
+        }
+        return list;
+    }
+
+    /* ===== 模块一：全局样式（解除单行截断，所有页面） ===== */
     let css = `
         a[title], h1, h2, h3, h4, .title, .video-title, [class*="title"],
         [class*="Title"], [class*="name"], [class*="Name"] {
@@ -191,7 +209,9 @@
     style.textContent = css;
     (document.head || document.documentElement).appendChild(style);
 
-    /* ---------- 2. 订阅页：标记容器 + 内联样式固定卡片内部布局 ---------- */
+    /* ===== 模块二：订阅页网格卡片（标记容器 + 内联样式固定布局） ===== */
+    // 注意：这里的内联样式与模块一 CSS 中的规则【有意重复】——
+    // 站点自身大量使用内联样式，纯 CSS 规则打不赢优先级，必须双保险。
     function styleCards() {
         document.querySelectorAll('#getav-sub-grid > div').forEach(card => {
             const anchor = card.querySelector(':scope > a.flex');
@@ -262,9 +282,9 @@
         styleCards();
     }
 
-    /* ---------- 3. 展开仍被截断的元素 ---------- */
+    /* ===== 模块三：展开仍被截断的元素 ===== */
     function expandTruncated(root) {
-        const els = (root || document).querySelectorAll('a, span, div, p, h1, h2, h3, h4, li');
+        const els = queryAllWithSelf(root, 'a, span, div, p, h1, h2, h3, h4, li');
         for (const el of els) {
             if (el.children.length > 3) continue;
             if (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) {
@@ -283,9 +303,9 @@
         }
     }
 
-    /* ---------- 4. 用 title 属性补全文字 ---------- */
+    /* ===== 模块四：用 title 属性补全文字 ===== */
     function fillFromTitle(root) {
-        const els = (root || document).querySelectorAll('a[title]');
+        const els = queryAllWithSelf(root, 'a[title]');
         for (const el of els) {
             const t = el.getAttribute('title');
             if (t && (el.textContent.includes('…') || el.textContent.includes('...') ||
@@ -295,40 +315,58 @@
         }
     }
 
-    /* ---------- 5. 列表页：标题字号大一号 ---------- */
+    /* ===== 模块五：列表页标题字号大一号 ===== */
     const enlargedTitles = new WeakSet();
     function enlargeListTitles(root) {
         // 订阅页有专门的名字样式，视频详情页（/videos/番号）不在此列，其余（首页/分类/搜索等）都算列表页
-        if (/\/profile\/subscriptions/.test(location.pathname)) return;
+        if (isSubscriptionsPage) return;
         if (/\/videos\//i.test(location.pathname)) return;
-        const els = (root || document).querySelectorAll(
+        const els = queryAllWithSelf(
+            root,
             'a[title], h1, h2, h3, h4, .title, .video-title, [class*="title"], [class*="Title"]'
         );
         for (const el of els) {
             if (enlargedTitles.has(el)) continue;
             if (el.closest('#getav-sub-grid')) continue;
-            enlargedTitles.add(el);
             const size = parseFloat(getComputedStyle(el).fontSize);
-            // 只对正文级别的标题放大（11–20px），跳过大标题和极小字
-            if (size >= 11 && size <= 20) {
-                el.style.setProperty('font-size', Math.round(size * 1.12) + 'px', 'important');
+            // 只对正文级别的标题放大，跳过大标题和极小字。
+            // 确认放大后才标记进 WeakSet：脚本是 document-start 运行，
+            // 首次检查时站点 CSS 可能未加载完，若先标记，
+            // 字号暂时不在区间内的元素会被永久跳过（时序 bug）
+            if (size >= MIN_FONT_SIZE && size <= MAX_FONT_SIZE) {
+                el.style.setProperty('font-size', Math.round(size * ENLARGE_FACTOR) + 'px', 'important');
+                enlargedTitles.add(el);
             }
         }
     }
 
-    /* ---------- 6. 监听动态加载 ---------- */
+    /* ===== 模块六：监听动态加载与启动 ===== */
     let timer = null;
+    let pendingRoots = []; // 收集新增节点：只扫变化子树，避免每次变动都全文档强制同步布局
     const schedule = () => {
         clearTimeout(timer);
         timer = setTimeout(() => {
-            fillFromTitle();
-            expandTruncated();
-            enlargeListTitles();
+            const roots = pendingRoots.length ? pendingRoots.splice(0) : [document];
+            // 新增节点过多（整页重渲染）时退化为一次全文档扫描，反而更省
+            const targets = roots.length > 20 ? [document] : roots;
+            for (const root of targets) {
+                fillFromTitle(root);
+                expandTruncated(root);
+                enlargeListTitles(root);
+            }
             makeThreeColumns();
-        }, 300);
+        }, DEBOUNCE_MS);
     };
-    const mo = new MutationObserver(muts => {
-        if (muts.some(m => m.addedNodes.length)) schedule();
+    const mo = new MutationObserver((muts) => {
+        let hasAdded = false;
+        for (const m of muts) {
+            if (!m.addedNodes.length) continue;
+            hasAdded = true;
+            for (const n of m.addedNodes) {
+                if (n.nodeType === Node.ELEMENT_NODE) pendingRoots.push(n);
+            }
+        }
+        if (hasAdded) schedule();
     });
 
     function boot() {

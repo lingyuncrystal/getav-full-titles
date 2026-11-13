@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.4] - 2026-11-13
+
+- 修复列表页标题放大偶发失效：脚本是 document-start 运行，首次检查时站点 CSS 可能未加载完，元素被提前标记进 WeakSet 后永久跳过；改为确认放大后才标记
+- 性能优化：MutationObserver 回调改为只扫描新增节点子树（原每次都全文档扫描，expandTruncated 的逐元素布局读取会造成强制同步布局）；新增节点过多时自动退化为一次全扫描
+- 规范统一：魔法数字常量化（放大倍率 / 字号区间 / 防抖间隔）、复用 isSubscriptionsPage 常量、分节注释风格与 MissAV 综合增强对齐
+
 ## [1.7.3] - 2026-11-12
 
 - 添加 `@icon`（GetAV 站点 favicon），脚本管理器与 Sleazyfork 页面显示图标
